@@ -6,6 +6,20 @@ import (
 	"sync"
 )
 
+type hashType int
+
+const (
+	LTHASH hashType = iota
+	MUHASH
+)
+
+func (h hashType) Strings() string {
+	return [...]string{
+		"LTHASH",
+		"MUHASH",
+	}[h]
+}
+
 type TraversalType int
 
 const (
@@ -44,7 +58,7 @@ func (e MerkleTreeError) Error() string {
 // Insert a node into a homomorphic merkle tree
 
 // Read constructs leaf nodes from byte slice
-func (m *MerkleTree) Read(b []byte) ([]*Node, MerkleTreeError) {
+func (m *MerkleTree) Read(b [][]byte) ([]*Node, MerkleTreeError) {
 	var nodes []*Node
 
 	if b == nil {
@@ -55,15 +69,27 @@ func (m *MerkleTree) Read(b []byte) ([]*Node, MerkleTreeError) {
 	b = Balance(b)
 
 	//builds the base leaf nodes
-	for _, v := range b {
-		node := new(Node)
-		node.HomomorphicHash = lthash.New16()
-		node.HomomorphicHash.Add([]byte{v})
-		node.value = fmt.Sprintf("%X\n", node.HomomorphicHash.Sum(nil))
-		nodes = append(nodes, node)
+	for _, fileDigests := range b {
+		for _, v := range fileDigests {
+			node := new(Node)
+			node.HomomorphicHash = lthash.New16()
+			node.HomomorphicHash.Add([]byte{v})
+			node.value = fmt.Sprintf("%X\n", node.HomomorphicHash.Sum(nil))
+			nodes = append(nodes, node)
+		}
 	}
 
 	return nodes, MerkleTreeError{Err: nil}
+}
+
+func (m *MerkleTree) BuildHomeTree(digests [][]byte) *Node {
+
+	nodes, err := m.Read(digests)
+	if err.Err != nil {
+		return nil
+	}
+	m.Build(nodes)
+	return m.root
 }
 
 // Build constructs a merkle tree from leaf nodes using homomorphic hash Lthash16 (lattice hash)

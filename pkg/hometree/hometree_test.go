@@ -6,8 +6,14 @@ import (
 
 func TestHomomorphicMerkleTree_Read(t *testing.T) {
 	var homeTree MerkleTree
-	example := []byte("washing up liquid")
-	_, err := homeTree.Read(example)
+	example1 := []byte("washing up liquid")
+	example2 := []byte("soap")
+	example3 := []byte("batteries")
+	var examples [][]byte
+	examples = append(examples, example1)
+	examples = append(examples, example2)
+	examples = append(examples, example3)
+	_, err := homeTree.Read(examples)
 	if err.Err != nil {
 		t.Errorf("Error homeTree.Read(): %s", err.Error())
 	}
@@ -16,8 +22,8 @@ func TestHomomorphicMerkleTree_Read(t *testing.T) {
 func TestHomomorphicMerkleTree_ReadNil(t *testing.T) {
 	var homeTree MerkleTree
 
-	example := []byte(nil)
-	_, mktErr := homeTree.Read(example)
+	examples := [][]byte(nil)
+	_, mktErr := homeTree.Read(examples)
 	if mktErr.Err == nil {
 		t.Errorf("Reading from empty slice should cause an exception. %s", mktErr.Err)
 	}
