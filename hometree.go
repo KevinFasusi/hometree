@@ -3,6 +3,7 @@ package hometree
 import (
 	"fmt"
 	"lukechampine.com/lthash"
+	"reflect"
 	"sync"
 )
 
@@ -37,9 +38,9 @@ func (t TraversalType) Strings() string {
 }
 
 type Node struct {
-	value           string
+	Value           string
 	HomomorphicHash lthash.Hash
-	left, right     *Node
+	Left, Right     *Node
 }
 
 type MerkleTree struct {
@@ -71,8 +72,8 @@ func (m *MerkleTree) read(b [][]byte) ([]*Node, MerkleTreeError) {
 		node := new(Node)
 		node.HomomorphicHash = lthash.New16()
 		node.HomomorphicHash.Add(block)
-		node.value = fmt.Sprintf("%x\n", node.HomomorphicHash.Sum(nil))
-		//fmt.Printf("Leaf Node:%v\n", node.value)
+		node.Value = fmt.Sprintf("%x\n", node.HomomorphicHash.Sum(nil))
+		//fmt.Printf("Leaf Node:%v\n", node.Value)
 		nodes = append(nodes, node)
 	}
 
@@ -105,18 +106,18 @@ func (m *MerkleTree) tree(nodes []*Node) {
 	}
 }
 
-// hanoi builds the merkle tree recursively from pairwise hashes
+// hanoi builds the merkle tree recursively from pairwise hashes unitl a root hash is generated
 func (m *MerkleTree) hanoi(nodes []*Node) []*Node {
 	var hanoiNodes []*Node
 	for i := 0; i < len(nodes); i = i + 2 {
 		node := new(Node)
 		node.HomomorphicHash = lthash.New16()
 		node.HomomorphicHash.Add(nodes[i].HomomorphicHash.Sum(nil))
-		node.left = nodes[i]
+		node.Left = nodes[i]
 		node.HomomorphicHash.Add(nodes[i+1].HomomorphicHash.Sum(nil))
-		node.right = nodes[i+1]
-		node.value = fmt.Sprintf("%x", node.HomomorphicHash.Sum(nil))
-		//fmt.Printf("Interior Node: %v\n", node.value)
+		node.Right = nodes[i+1]
+		node.Value = fmt.Sprintf("%x", node.HomomorphicHash.Sum(nil))
+		//fmt.Printf("Interior Node: %v\n", node.Value)
 		hanoiNodes = append(hanoiNodes, node)
 	}
 	if len(hanoiNodes) != 1 && nodes != nil {
@@ -148,9 +149,9 @@ func (m *MerkleTree) balanceNodes(nodes []*Node) []*Node {
 	return nodes
 }
 
-// Traverse
+// Traverse the merkle tree
 func (m *MerkleTree) Traverse(traversalType TraversalType) []string {
-	//fmt.Printf("%x", m.root.value) var v []string
+	//fmt.Printf("%x", m.root.Value) var v []string
 	var digests []string
 
 	switch traversalType {
@@ -172,33 +173,86 @@ func (m *MerkleTree) Insert() {
 // Remove leaf node from existing tree and propagates changes through the merkle tree
 func (m *MerkleTree) Remove() {}
 
-// Diff compare two merkle trees and return the difference as a tree and slice
-func Diff(hmt1 *Node, hmt2 *Node) {}
+// Diff compare two merkle trees and returns the difference as a slice and a subtree
+func Diff(hmt1 *Node, hmt2 *Node) ([]string, *Node) {
+	var hmt1Digests []string
+	var hmt2Digests []string
+	var diff []string
+	var subT *Node
+
+	inOrderTraverse(hmt1, &hmt1Digests)
+	inOrderTraverse(hmt2, &hmt2Digests)
+
+	eq := reflect.DeepEqual(hmt1Digests, hmt2Digests)
+
+	if eq {
+		return diff, subT
+	}
+
+	var remove []string
+
+	for _, i := range hmt2Digests {
+		for _, j := range hmt1Digests {
+			if i == j {
+				remove = append(remove, j)
+			}
+		}
+	}
+
+	for _, hmt1D := range hmt1Digests {
+		for n, hmt2D := range hmt2Digests {
+			for _, k := range remove {
+				if hmt1D == k && hmt1D == hmt2D {
+					hmt2Digests = append(hmt2Digests[:n], hmt2Digests[n+1:]...)
+				}
+			}
+		}
+	}
+
+	diff = hmt2Digests
+	subT = diffSubTree(hmt2Digests, hmt2)
+	return diff, subT
+}
+
+// diffSubTree locates the lowest depth node with the same digest found in the diff and returns the subtree
+func diffSubTree(diff []string, node *Node) *Node {
+	if node == nil {
+		return nil
+	}
+	diffSubTree(diff, node.Left)
+	for _, i := range diff {
+		if i == node.Value {
+			return node
+		}
+	}
+	diffSubTree(diff, node.Right)
+	return nil
+}
 
 func inOrderTraverse(node *Node, digests *[]string) {
 
 	if node == nil {
 		return
 	}
-	inOrderTraverse(node.left, digests)
-	*digests = append(*digests, node.value)
-	inOrderTraverse(node.right, digests)
+	inOrderTraverse(node.Left, digests)
+	*digests = append(*digests, node.Value)
+	inOrderTraverse(node.Right, digests)
 }
 
 func preOrderTraversal(node *Node, digests *[]string) {
 	if node == nil {
 		return
 	}
-	*digests = append(*digests, node.value)
-	preOrderTraversal(node.left, digests)
-	preOrderTraversal(node.right, digests)
+	*digests = append(*digests, node.Value)
+	preOrderTraversal(node.Left, digests)
+	preOrderTraversal(node.Right, digests)
 }
 
 func postOrderTraversal(node *Node, digests *[]string) {
 	if node == nil {
 		return
 	}
-	preOrderTraversal(node.left, digests)
-	preOrderTraversal(node.right, digests)
-	*digests = append(*digests, node.value)
+	preOrderTraversal(node.Left, digests)
+	preOrderTraversal(node.Right, digests)
+	*digests = append(*digests, node.Value)
 }

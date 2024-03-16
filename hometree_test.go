@@ -126,3 +126,33 @@ func TestMerkleTree_Traversal(t *testing.T) {
 	}
 
 }
+
+func TestDiff(t *testing.T) {
+	var bs [][]byte
+	var bas [][]byte
+	var homeTree MerkleTree
+	sentence := "Homomorphisms are structure-preserving maps between two algebraic structures"
+	altSentence := "Homomorphisms are structure-preserving maps between two algebraic structures allowing a homomorphic " +
+		"hash to be updated"
+	tokens := strings.Split(sentence, " ")
+	for _, token := range tokens {
+		bs = append(bs, []byte(token))
+	}
+	tokens = strings.Split(altSentence, " ")
+	for _, token := range tokens {
+		bas = append(bas, []byte(token))
+	}
+
+	rootS, _ := homeTree.Build(bs)
+	in := homeTree.Traverse(InOrder)
+	rootAs, _ := homeTree.Build(bas)
+	_, subTree := Diff(rootS, rootAs)
+
+	_, subDiffTree := Diff(subTree, rootAs)
+
+	n, _ := Diff(subDiffTree, rootS)
+
+	if !reflect.DeepEqual(in, n) {
+		t.Errorf("Subtree diff should equal original Node")
+	}
+}
