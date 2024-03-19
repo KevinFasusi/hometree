@@ -14,7 +14,7 @@ Hometree has several use cases including but not limited to:
 ## Install
 
 ```sh
-get -u github.com/KevinFasusi/hometree
+go get -u github.com/KevinFasusi/hometree
 ```
 
 ## Examples

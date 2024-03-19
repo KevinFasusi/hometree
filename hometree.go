@@ -38,9 +38,10 @@ func (t TraversalType) Strings() string {
 }
 
 type Node struct {
-	Value           string
+	Value           string `json:"value"`
 	HomomorphicHash lthash.Hash
-	Left, Right     *Node
+	Left            *Node `json:"left"`
+	Right           *Node `json:"right"`
 }
 
 type MerkleTree struct {
@@ -73,7 +74,6 @@ func (m *MerkleTree) read(b [][]byte) ([]*Node, MerkleTreeError) {
 		node.HomomorphicHash = lthash.New16()
 		node.HomomorphicHash.Add(block)
 		node.Value = fmt.Sprintf("%x\n", node.HomomorphicHash.Sum(nil))
-		//fmt.Printf("Leaf Node:%v\n", node.Value)
 		nodes = append(nodes, node)
 	}
 
@@ -117,7 +117,6 @@ func (m *MerkleTree) hanoi(nodes []*Node) []*Node {
 		node.HomomorphicHash.Add(nodes[i+1].HomomorphicHash.Sum(nil))
 		node.Right = nodes[i+1]
 		node.Value = fmt.Sprintf("%x", node.HomomorphicHash.Sum(nil))
-		//fmt.Printf("Interior Node: %v\n", node.Value)
 		hanoiNodes = append(hanoiNodes, node)
 	}
 	if len(hanoiNodes) != 1 && nodes != nil {
@@ -129,9 +128,7 @@ func (m *MerkleTree) hanoi(nodes []*Node) []*Node {
 // balance the len of any slice, for use as a node to hash, by ensuring the number of entries in the slice is even.
 func balance[V any](b []V) []V {
 	if len(b)%2 != 0 {
-		//fmt.Printf("Record: %v\nLength of ngram is not balanced: length==%d\n", b, len(b))
 		b = append(b, b[len(b)-1])
-		//fmt.Printf("Record balanced: %v\nLength of ngram is balanced: length==%d\n", b, len(b))
 	}
 	return b
 }
@@ -139,19 +136,16 @@ func balance[V any](b []V) []V {
 // balanceNodes ensures the merkle tree even number of nodes at height h_n
 func (m *MerkleTree) balanceNodes(nodes []*Node) []*Node {
 	if len(nodes)%2 != 0 {
-		//fmt.Printf("Record: %v\nLength of node is not balanced: length==%d\n", nodes, len(nodes))
 		var node, oNode []*Node
 		oNode = append(oNode, nodes[len(nodes)-1])
 		_ = copy(oNode, node)
 		nodes = append(nodes, oNode[0])
-		//fmt.Printf("Record balanced: %v\nLength of node is balanced: length==%d\n", nodes, len(nodes))
 	}
 	return nodes
 }
 
 // Traverse the merkle tree
 func (m *MerkleTree) Traverse(traversalType TraversalType) []string {
-	//fmt.Printf("%x", m.root.Value) var v []string
 	var digests []string
 
 	switch traversalType {
